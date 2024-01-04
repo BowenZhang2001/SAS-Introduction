@@ -76,3 +76,94 @@ DATA 步骤具有一个内在的结构，一个隐式的、内置的循环。DAT
 SAS 读取第一条观测并使用 DATA 步骤的第一行进行处理，然后是第二行，依此类推，直到 SAS 达到 DATA 步骤的末尾。然后，SAS 将该观测写入输出数据集。这张图说明了逐行循环的第一次执行。一旦 SAS 完成对第一个观测的处理，它会回到 DATA 步骤的顶部并获取第二个观测。当 SAS 完成最后一个观测时，它会自动停止。
 
 除此之外，SAS提供了多种方法调用逐行和逐观测之外的结构。其中包括 `RETAIN` 声明和 `OUTPUT` 声明。
+
+## 2 数据读取
+
+### 2.1 告诉 SAS 原始数据的位置
+
+如果你的数据存储在原始数据文件中，使用 DATA 步骤读取数据具有最大的灵活性。你的原始数据可以是内部数据，即在你的SAS程序中，或者存储在一个单独的文件中。无论哪种方式，你都必须告诉SAS数据的位置。
+
+#### 内部数据
+
+如果你在 SAS 程序中直接输入原始数据，那么这些数据是内嵌在你的程序中的。在数据量较小或者在使用小型测试数据集测试程序时可以这样做。使用`DATALINES`语句来指示内嵌数据。`DATALINES`语句必须是 DATA 步骤中的最后一条语句。在`DATALINES`语句之后的所有行都被视为数据，直到 SAS 遇到一个分号。
+
+```sas
+* Read internal data into SAS data set called student;
+DATA student;
+	INPUT Name $ Gender $ ID;
+	DATALINES;
+Alex M 1910144
+Bill M 1910116
+Cindy F 1910233
+	;
+RUN;
+```
+
+#### 外部数据
+
+通常人们将数据存储在外部文件中，将数据与程序分开。这样做可以消除在编辑 SAS 程序时意外更改数据的可能性。使用`INFILE`语句告诉 SAS 外部数据文件的文件名和路径（如果适用）。`INFILE`语句紧跟在 DATA 语句之后，必须位于`INPUT`语句之前。在`INFILE`关键字之后，文件路径和名称应该用引号括起来。
+
+```sas
+* Examples from several operating environments;
+
+* Windows;          
+INFILE 'c:\MyDir\student.dat'; 
+* UNIX;
+INFILE '/home/mydir/president.dat'; 
+* z/OS;
+INFILE 'MYID.STUDENT.DAT'; 
+```
+
+假设以下数据存储在名为 student1.dat 的文件中，该文件位于目录 RawData 中：
+
+
+```txt
+Alex M 1910144
+Bill M 1910116
+Cindy F 1910233
+```
+
+以下程序演示了使用`INFILE`语句读取外部数据文件的用法：
+
+```sas
+* Read data from external file into SAS data set;
+DATA student;
+    INFILE 'C://RawData/student.dat';
+    INPUT Name $ Gender $ ID;
+RUN;
+```
+
+### 2.2 读取以空格为间隔符的原始数据
+
+如果原始数据文件中的值都至少被一个空格分隔，那么使用列表输入是一种合适的读取数据的方法。列表输入是将原始数据读入 SAS 的一种简便方式，但有着一些限制。你必须读取记录中的所有数据，不能跳过不需要的值。任何缺失的数据必须用句点表示。如果存在字符数据，它必须是简单的，即没有空格，长度不超过8个字符。如果数据文件包含需要特殊处理的日期或其他值，那么列表输入可能不适用。
+
+
+`INPUT`语句是 DATA 步骤的一部分，它告诉 SAS 如何读取你的原始数据，只需在`INPUT`关键字之后按照它们在数据文件中出现的顺序列出变量名。通常，变量名不超过32个字符，以字母或下划线开头，只能包含字母、下划线或数字。如果值是字符型（而不是数值型），则在变量名后面加上美元符号（ $ ）。在变量名之间至少留有一个空格。
+
+
+假设以下数据存储在名为 student2.dat 的文件中，该文件位于目录 RawData 中。这个文件包含了学生在三门课程中的分数。
+
+```txt
+Alex 97 98 93
+Bill 99 .
+92
+Cindy 94 . .
+Denny . 90 91
+```
+
+
+这个数据文件看起来不太整齐，但它确实符合列表输入的所有要求：字符数据不超过8个字符，没有嵌入的空格，所有值之间至少用一个空格分隔，并且缺失数据用句点表示。请注意，学生 Bill 的数据已经溢出到下一个数据行。这并不会造成报错，因为默认情况下，如果`INPUT`语句中的变量数多于数据行中的值，SAS 会自动转到下一行读取更多数据。
+
+```sas
+DATA score;
+	INFILE 'C://RawData/student.dat';
+	INPUT Name $ Calculus Algebra Stats;
+RUN;
+
+* Print the data to make sure the file was correctly read;
+PROC PRINT DATA = score;
+	TITLE 'SAS Data Set score';
+RUN;
+```
+
+变量 Name、Calculus、Algebra 和 Stats 在`INPUT`关键字之后按照它们在文件中出现的顺序列出。在 Name 后面的美元符号（ $ ）表示它是一个字符变量；所有其他变量都是数值型的。在读取数据后，使用`PROC PRINT`语句打印数据以确保它们是正确的。在`PROC PRINT`之后的`TITLE`语句告诉 SAS 将引号中的文本放置在每一页输出的顶部。如果你的程序中没有`TITLE`语句，SAS 将在每一页顶部放置“The SAS System”这几个词。

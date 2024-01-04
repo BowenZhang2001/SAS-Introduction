@@ -72,3 +72,90 @@ This diagram illustrates how an observation flows through a DATA step:
 SAS reads observation number one and processes it using line one of the DATA step, then line two, and so on until SAS reaches the end of the DATA step. Then SAS writes the observation in the output data set. This diagram10shows the first execution of the line-by-line loop. Once SAS finishes with the first observation, it loops back to the top of the DATA step and picks up observation two. When SAS reaches the last observation, it automatically stops.
 
 Apart from that, SAS offers a number of ways to override the line-by-line and observation-by-observation structure. These include the `RETAIN` statement, and the `OUTPUT` statement.
+
+## 2 Getting Your Data into SAS
+
+### 2.1 Telling SAS Where to Find Your Raw Data
+
+If your data are in raw data files (also referred to as text, ASCII, sequential, or flat files), using the DATA step to read the data gives you the most flexibility. Your raw data may be either internal (also called instream) to your SAS program, or in a separate file. Either way, you must tell SAS where to find your data.
+
+#### Internal Raw Data
+
+If you type raw data directly in your SAS program, then the data are internal to your program. You may want to do this when you have small amounts of data, or when you are testing a program with a small test data set. Use the `DATALINES` statement to indicate internal data. The `DATALINES` statement must be the last statement in the DATA step. All lines in the SAS program following the `DATALINES` statement are considered data until SAS encounters a semicolon.
+
+```sas
+*  Read internal data into SAS data set called student;
+DATA student;
+	INPUT Name $ Gender $ ID;
+	DATALINES;
+Alex M 1910144
+Bill M 1910116
+Cindy F 1910233
+	;
+RUN;
+```
+
+#### External Raw Data Files
+
+Usually you will want to keep data in external files, separating the data from the program. This eliminates the chance that data will accidentally be altered when you are editing your SAS program. Use the `INFILE` statement to tell SAS the filename and path, if appropriate, of the external file containing the data. The `INFILE` statement follows the `DATA` statement and must precede the `INPUT` statement. After the `INFILE` keyword, the file path and name are enclosed in quotation marks.
+
+```sas
+* Examples from several operating environments;
+
+* Windows;          
+INFILE 'c:\MyDir\student.dat'; 
+* UNIX;
+INFILE '/home/mydir/president.dat'; 
+* z/OS;
+INFILE 'MYID.STUDENT.DAT'; 
+```
+
+Suppose the following data are in a file called student1.dat in the directory RawData:
+
+```txt
+Alex M 1910144
+Bill M 1910116
+Cindy F 1910233
+```
+
+The following program shows the use of the INFILE statement to read the external data file: 
+
+```sas
+* Read data from external file into SAS data set;
+DATA student;
+    INFILE 'C://RawData/student.dat';
+    INPUT Name $ Gender $ ID;
+RUN;
+```
+
+### 2.2 Reading Raw Data Separated by Space
+
+If the values in your raw data file are all separated by at least one space, then using list input (also called free formatted input) to read the data may be appropriate. List input is an easy way to read raw data into SAS, but with ease come a few limitations. You must read all the data in a record—no skipping over unwanted values. Any missing data must be indicated with a period. Character data, if present, must be simple: no embedded spaces, and no values greater than 8 characters in length. If the data file contains dates or other values which need special treatment, then list input may not be appropriate.
+
+The `INPUT` statement, which is part of the DATA step, tells SAS how to read your raw data. To write an `INPUT` statement using list input, simply list the variable names after the `INPUT` keyword in the order they appear in the data file. Generally, variable names must be 32 characters or fewer, start with a letter or an underscore, and contain only letters, underscores, or numerals. If the values are character (not numeric), then place a dollar sign ( \$ ) after the variable name. Leave at least one space between names.
+
+Suppose the following data are in a file called student2.dat in the directory RawData. This file contains students' scores of three courses.
+
+```txt
+Alex 97 98 93
+Bill 99 .
+92
+Cindy 94 . .
+Denny . 90 91
+```
+
+This data file does not look very neat, but it does meet all the requirements for list input: the character data are 8 characters or fewer and have no embedded spaces, all values are separated by at least one space, and missing data are indicated by a period. Notice that the data for student Bill have spilled over to the next data line. This is not a problem since, by default SAS will go to the next data line to read more data if there are more variables in the `INPUT` statement than there are values in the data line.
+
+```sas
+DATA score;
+	INFILE 'C://RawData/student.dat';
+	INPUT Name $ Calculus Algebra Stats;
+RUN;
+
+* Print the data to make sure the file was correctly read;
+PROC PRINT DATA = score;
+	TITLE 'SAS Data Set score';
+RUN;
+```
+
+The variables Name, Calculus, Algebra, and Stats are listed after the keyword `INPUT` in the same order as they appear in the file. A dollar sign ( \$ ) after Name indicates that it is a character variable; all the other variables are numeric. A `PROC PRINT` statement is used to print the data values after reading them to make sure they are correct. The `TITLE` statement after the `PROC PRINT` tells SAS to put the text enclosed in quotation marks on the top of each page of output. If you had no `TITLE` statement in your program, SAS would put the words "The SAS System" at the top of each page.
