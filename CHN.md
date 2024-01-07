@@ -167,3 +167,74 @@ RUN;
 ```
 
 变量 Name、Calculus、Algebra 和 Stats 在`INPUT`关键字之后按照它们在文件中出现的顺序列出。在 Name 后面的美元符号（ $ ）表示它是一个字符变量；所有其他变量都是数值型的。在读取数据后，使用`PROC PRINT`语句打印数据以确保它们是正确的。在`PROC PRINT`之后的`TITLE`语句告诉 SAS 将引号中的文本放置在每一页输出的顶部。如果你的程序中没有`TITLE`语句，SAS 将在每一页顶部放置“The SAS System”这几个词。
+
+
+### 2.3 阅读以列形式排列的原始数据
+
+一些原始数据文件中，并非所有的数值或缺失数据之间都有空格（或其他分隔符）, 因此这些文件无法使用列表输入进行读取。但如果每个变量的值始终出现在数据行的相同位置，那么只要所有的值都是字符或标准数值，就可以使用列输入。标准数值数据仅包含数字、小数点、加减号以及用于科学计数法的 E。包含逗号或日期等的数值不属于标准数值。
+
+列输入相对于列表输入具有以下优势：不需要在值之间添加空格；可以将缺失值留空；字符数据可以包含嵌入的空格；可以跳过不需要的变量。
+
+使用列输入时，`INPUT`语句采用以下形式。在`INPUT`关键字之后，列出第一个变量的名称。如果该变量是字符型，留一个空格，然后添加一个\$符号。在\$符号之后，或者如果是数值型，则键入变量名，再留一个空格，然后列出该变量所在的列或列范围。这些列是数据行中字符或数字的位置。
+
+
+这是一个包含四名学生课程成绩的数据集。它有三个变量：姓名（Name）、部门（Department）和分数（Score）。在数据上方放置了一个显示列号的列标尺，（仅供参考，并非出现在数据集中）。
+
+```txt
+----+----1----+----2----+----3
+Alex     Biostatistics 97
+Bill                   97
+Cindy    Epidemiology  95
+Denny    Data Science  96
+```
+
+```sas
+DATA score;
+	INFILE 'C://RawData/student3.dat';
+	INPUT Name $ 1-9 Department $ 10-23 score 24-25;
+RUN;
+
+* Print the data to make sure the file was correctly read;
+PROC PRINT DATA = score;
+	TITLE 'SAS Data Set score';
+RUN;
+```
+
+
+### 2.4 读取非标准格式的原始数据
+
+有时原始数据并不是直接的数值或字符。在SAS中，格式输入（informat）用于告诉计算机如何解释这些类型的数据。
+
+格式输入主要分为三类：字符型、数值型和日期型。这三类格式输入的一般形式如下：
+
+|   Character  |   Numeric   |    Date    |
+|:------------:|:-----------:|:----------:|
+| $ informatw. | informatw.d | informatw. |
+
+\$ 表示字符格式输入，w 表示总宽度，而 d 表示小数点后的位数（仅适用于数值型输入）。句点是格式输入名称的一个非常重要的部分。如果没有句点，SAS可能会将格式输入视为变量名，默认情况下，变量名不能包含除了下划线以外的任何特殊字符。有两个格式输入没有名称：`$w.`，用于读取标准字符数据，以及`w.d`，用于读取标准数值数据。
+
+这是关于四名学生信息的示例。它有四个变量，分别是姓名（Name）、部门（Department）、出生日期（Birthdate）和课程分数（Score）。每个变量的列是由格式输入的起始点和宽度确定的。SAS 始终从第一列开始；因此，第一个变量 Name 的数据值，其格式输入为`$9.`，位于第1列到第9列。现在，第二个变量的起始点是第10列，SAS 在第10列到第23列读取 Department 的值。出生日期的值从第24列开始，采用日期格式。最后，Score 的值在第35列到第38列。这四列包括数字和小数点。
+
+```txt
+Alex     Biostatistics 01-12-2001 97.0
+Bill     Statistics    07-01-2002 92.4
+Cindy    Epidemiology  12-08-2000 95.2
+Denny    Data Science  02-01-2001 96.8
+```
+
+```sas
+* Create a SAS data set named score;
+* Read the file student4.dat using formatted input;
+DATA score;
+	INFILE 'C://RawData/student4.dat';
+	INPUT Name $9. Department $14. Birthdate MMDDYY10. +1 Score 4.1;
+RUN;
+
+* Print the data set to make sure the file was correctly read;
+PROC PRINT DATA = score;
+	TITLE 'SAS Data Set score';
+RUN;
+```
+
+
+注意，`+1`表示跳过一列。变量 Birthdate 的输出看起来有些奇怪。例如，日期“01-12-2001”的输出是14987。这是自1960年1月1日以来的天数。这个数字被称为SAS日期值。

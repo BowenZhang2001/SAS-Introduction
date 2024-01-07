@@ -159,3 +159,71 @@ RUN;
 ```
 
 The variables Name, Calculus, Algebra, and Stats are listed after the keyword `INPUT` in the same order as they appear in the file. A dollar sign ( \$ ) after Name indicates that it is a character variable; all the other variables are numeric. A `PROC PRINT` statement is used to print the data values after reading them to make sure they are correct. The `TITLE` statement after the `PROC PRINT` tells SAS to put the text enclosed in quotation marks on the top of each page of output. If you had no `TITLE` statement in your program, SAS would put the words "The SAS System" at the top of each page.
+
+### 2.3 Reading Raw Data Arranged in Columns
+
+Some raw data files do not have spaces (or other delimiters) between all the values or periods for missing data — so the files can't be read using list input. But if each of the variable's values is always found in the same place in the data line, then you can use column input as long as all the values are character or standard numeric. Standard numeric data contain only numerals, decimal points, plus and minus signs, and E for scientific notation. Numbers with embedded commas or dates, for example, are not standard.
+
+Column input has the following advantages over list input: Spaces are not required between values; Missing values can be left blank; Character data can have embedded spaces; You can skip unwanted variables.
+
+With column input, the `INPUT` statement takes the following form. After the `INPUT` keyword, list the first variable's name. If the variable is character, leave a space; then place a \$. After the \$, or variable name if it is numeric, leave a space; then list the column or range of columns for that variable. The columns are positions of the characters or numbers in the data line.
+
+This is a data set that contains four students' score of a course. It has three variables: Name, Department and score. A column ruler showing the column numbers has been placed above the data, just for reference. 
+
+```txt
+----+----1----+----2----+----3
+Alex     Biostatistics 97
+Bill                   97
+Cindy    Epidemiology  95
+Denny    Data Science  96
+```
+
+```sas
+DATA score;
+	INFILE 'C://RawData/student3.dat';
+	INPUT Name $ 1-9 Department $ 10-23 score 24-25;
+RUN;
+
+* Print the data to make sure the file was correctly read;
+PROC PRINT DATA = score;
+	TITLE 'SAS Data Set score';
+RUN;
+```
+
+
+### 2.4 Reading Raw Data Not in Standard Format
+
+Sometimes raw data are not straightforward numeric or character. In SAS, informats are used to tell the computer how to interpret these types of data.
+
+There are three general types of informats: character, numeric, and date. The three types of informats have the following general forms:
+
+|   Character  |   Numeric   |    Date    |
+|:------------:|:-----------:|:----------:|
+| $ informatw. | informatw.d | informatw. |
+
+The \$ indicates character informats, w is the total width, and d is the number of decimal places (numeric informats only). The period is a very important part of the informat name. Without a period, SAS may try to interpret the informat as a variable name, which by default, cannot contain any special characters except the underscore. Two informats do not have names: `$w.`, which reads standard character data, and `w.d`, which reads standard numeric data.
+
+This is an example about the information of four students. It has four variables, Name, Department, Birthdate, and Score for a course. The columns read for each variable are determined by the starting point and the width of the informat. SAS always starts with the first column; so the data values for the first variable, Name, which has an informat of `$9.`, are in columns 1 through 9.  Now the starting point for the second variable is column 10, and SAS reads values for Department in columns 10 through 23. The values for the Birthdate, start in column 24 and are in a date form. Lastly, the values for Score, are in columns 35 through 38. The four columns include the decimal place and the decimal point itself.
+
+```txt
+Alex     Biostatistics 01-12-2001 97.0
+Bill     Statistics    07-01-2002 92.4
+Cindy    Epidemiology  12-08-2000 95.2
+Denny    Data Science  02-01-2001 96.8
+```
+
+```sas
+* Create a SAS data set named score;
+* Read the file student4.dat using formatted input;
+DATA score;
+	INFILE mypath('student4.dat');
+	INPUT Name $9. Department $14. Birthdate MMDDYY10. +1 Score 4.1;
+RUN;
+
+* Print the data set to make sure the file was correctly read;
+PROC PRINT DATA = score;
+	TITLE 'SAS Data Set score';
+RUN;
+```
+
+Notice that the `+1` skips over one column. The output of the variable Birthdate seems weird. For example, the date "01-12-2001" has an output 14987.  This is the number of days since Jan 1, 1960. This number is referred to as a SAS date value.
